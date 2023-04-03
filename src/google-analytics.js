@@ -1,8 +1,8 @@
 const { google } = require("googleapis");
 
 // API Documentation: https://developers.google.com/analytics/devguides/config/admin/v1/rest/v1
-const analyticsAdmin = google.analyticsadmin("v1");
-const analyticsData = google.analyticsdata("v1");
+const analyticsAdmin = google.analyticsadmin("v1beta");
+const analyticsData = google.analyticsdata("v1beta");
 
 const getAccounts = auth =>
   new Promise((resolve, reject) => {
