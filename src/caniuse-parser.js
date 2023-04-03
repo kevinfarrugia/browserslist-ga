@@ -226,12 +226,15 @@ function parse(entries) {
 
   for (var i = 0; i < entries.length; i++) {
     var entry = entries[i];
-    var os = entry[0];
-    var os_ver = entry[1];
-    var browser = entry[2];
-    var version = entry[3];
-    var isMobile = entry[4] === "mobile" || entry[4] === "tablet";
-    var pageviews = +entry[5];
+    const { dimensionValues, metricValues } = entry;
+    var os = dimensionValues[0]?.value;
+    var os_ver = dimensionValues[1]?.value;
+    var browser = dimensionValues[2]?.value;
+    var version = "Unknown";
+    var isMobile = dimensionValues[3]?.value === "mobile" || dimensionValues[3]?.value === "tablet";
+    var pageviews = parseInt(metricValues[0]?.value ?? "0");
+
+    console.log({ os, os_ver, browser, version, isMobile, pageviews });
 
     if (browser == "Opera" && (isMobile || os == "(not set)")) {
       browser = "Opera Mobile";
