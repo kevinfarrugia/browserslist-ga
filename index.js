@@ -3,7 +3,7 @@
 const fs = require("fs");
 const inquirer = require("inquirer");
 const googleAuth = require("./src/google-auth");
-const { getAccounts, getWebProperties, getProfiles, getData } = require("./src/google-analytics");
+const { getAccounts, getProperties, getData } = require("./src/google-analytics");
 const { parse } = require("./src/caniuse-parser");
 
 inquirer.registerPrompt("datetime", require("inquirer-datepicker-prompt"));
@@ -14,9 +14,9 @@ googleAuth(oauth2Client => {
   let selectedProfile;
 
   getAccounts(oauth2Client)
-    .then((accounts) => {
+    .then(accounts => {
       if (accounts.length === 0) {
-        throw new Error('No Google Analytics accounts.')
+        throw new Error("No Google Analytics accounts.");
       }
 
       return accounts;
@@ -29,44 +29,34 @@ googleAuth(oauth2Client => {
           message: "Please select an account:",
           choices: accounts.map(account => ({
             value: account,
-            name: `${account.name} (#${account.id})`,
+            name: `${account.displayName} (#${account.name.slice(
+              account.name.lastIndexOf("/") + 1
+            )})`,
           })),
         },
       ])
     )
-    .then(({ account }) => getWebProperties(oauth2Client, account.id))
-    .then(webProperties =>
+    .then(({ account }) => getProperties(oauth2Client, account.name))
+    .then(properties =>
       inquirer.prompt([
         {
           type: "list",
-          name: "webProperty",
+          name: "property",
           message: "Please select a property:",
-          choices: webProperties.map(webProperty => ({
-            value: webProperty,
-            name: `${webProperty.name} (#${webProperty.id})`,
+          choices: properties.map(property => ({
+            value: property,
+            name: `${property.displayName} (#${property.name.slice(
+              property.name.lastIndexOf("/") + 1
+            )}})`,
           })),
         },
       ])
     )
-    .then(({ webProperty }) => getProfiles(oauth2Client, webProperty.accountId, webProperty.id))
-    .then(profiles =>
-      inquirer.prompt([
-        {
-          type: "list",
-          name: "profile",
-          message: "Please select a profile:",
-          choices: profiles.map(profile => ({
-            value: profile,
-            name: `${profile.name} (#${profile.id})`,
-          })),
-        },
-      ])
-    )
-    .then(({ profile }) => {
+    .then(({ property }) => {
       const defaultStartDate = new Date();
       const defaultEndDate = new Date();
 
-      selectedProfile = profile;
+      selectedProperty = property;
 
       // End date defaults to today, start date defaults to 90 days ago
       defaultStartDate.setDate(defaultEndDate.getDate() - 90);
@@ -88,7 +78,9 @@ googleAuth(oauth2Client => {
         },
       ]);
     })
-    .then(({ startDate, endDate }) => getData(oauth2Client, selectedProfile.id, startDate, endDate))
+    .then(({ startDate, endDate }) =>
+      getData(oauth2Client, selectedProperty.name, startDate, endDate)
+    )
     .then(parse)
     .then(stats => {
       fs.writeFileSync(outputFilename, JSON.stringify(stats, null, 2));

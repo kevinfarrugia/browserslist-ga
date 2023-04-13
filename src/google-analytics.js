@@ -1,77 +1,70 @@
 const { google } = require("googleapis");
 
-const analytics = google.analytics("v3");
+// API Documentation: https://developers.google.com/analytics/devguides/config/admin/v1/rest/v1
+const analyticsAdmin = google.analyticsadmin("v1beta");
+const analyticsData = google.analyticsdata("v1beta");
 
 const getAccounts = auth =>
   new Promise((resolve, reject) => {
-    analytics.management.accounts.list({ auth }, (err, response) => {
+    analyticsAdmin.accounts.list({ auth }, (err, response) => {
       if (err) return reject(err);
 
       const results = response.data;
-      const accounts = results.items;
+      const accounts = results.accounts;
 
       resolve(accounts);
     });
   });
 
-const getWebProperties = (auth, accountId) =>
+const getProperties = (auth, name) =>
   new Promise((resolve, reject) => {
-    analytics.management.webproperties.list({ auth, accountId }, (err, response) => {
+    analyticsAdmin.properties.list({ auth, filter: `parent: ${name}` }, (err, response) => {
       if (err) return reject(err);
 
       const results = response.data;
-      const webProperties = results.items;
+      const webProperties = results.properties;
 
       resolve(webProperties);
     });
   });
 
-const getProfiles = (auth, accountId, webPropertyId) =>
-  new Promise((resolve, reject) => {
-    analytics.management.profiles.list({ auth, accountId, webPropertyId }, (err, response) => {
-      if (err) return reject(err);
-
-      const results = response.data;
-      const profiles = results.items;
-
-      resolve(profiles);
-    });
-  });
-
-const getData = (auth, profileId, startDate, endDate) =>
+const getData = (auth, property, startDate, endDate) =>
   new Promise((resolve, reject) => {
     const options = {
-      auth,
-      ids: `ga:${profileId}`,
       dimensions: [
-        "ga:operatingSystem",
-        "ga:operatingSystemVersion",
-        "ga:browser",
-        "ga:browserVersion",
-        "ga:deviceCategory",
-      ].join(","),
-      sort: "ga:browser",
-      "max-results": 100000,
-      metrics: "ga:pageviews",
-      "start-date": startDate.toISOString().slice(0, 10),
-      "end-date": endDate.toISOString().slice(0, 10),
+        { name: "operatingSystem" },
+        { name: "operatingSystemVersion" },
+        { name: "browser" },
+        { name: "deviceCategory" },
+      ],
+      orderBys: [{ dimension: { dimensionName: "browser" } }],
+      limit: 5000,
+      metrics: [{ name: "screenPageViews" }],
+      dateRanges: [
+        {
+          startDate: startDate.toISOString().slice(0, 10),
+          endDate: endDate.toISOString().slice(0, 10),
+        },
+      ],
     };
 
     console.log("Getting data...");
 
-    analytics.data.ga.get(options, (err, response) => {
-      if (err) return reject(err);
+    analyticsData.properties.runReport(
+      { auth, property, requestBody: options },
+      (err, response) => {
+        if (err) return reject(err);
 
-      const results = response.data;
-      const data = results.rows || [];
+        const results = response.data;
+        const rows = results.rows;
 
-      resolve(data);
-    });
+        resolve(rows);
+      }
+    );
   });
 
 module.exports = {
   getAccounts,
-  getWebProperties,
-  getProfiles,
+  getProperties,
   getData,
 };
